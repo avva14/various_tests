@@ -1,8 +1,10 @@
 import numpy as np
 
-MSIZE = 4
+MSIZE = 5
 NSIZE = 4
 SIZE = MSIZE * NSIZE
+TOLERANCE = 1e-5
+MAXEPOCHS = 200
 
 def globalpos(x,y):
     '''
@@ -56,28 +58,27 @@ def main():
 
 ###parameters block
 # number of steps in 'epoch'
-    NSTEPS = 100000
+    NSTEPS = 10000
 
 # p probability value
-    pprob = 0.1
+    pprob = 0.8
 
 #q probability value
-    qprob = 0.0
+    qprob = 0.5
 
 # setting Rij values
     rm = np.zeros(SIZE)
-    rm[0] = 10
+    rm[10] = 10
 
 #generates lists for nearests neighbors
     nb = neighgenerate()
-    #print(rm.reshape((-1,MSIZE)))
 
 #sums of Rij values for random walk
     nsite = np.zeros(SIZE)
 
 #number of visits of ite site
-    ncounter = np.zeros(SIZE, dtype=int)
-    nstartcounter = np.zeros(SIZE, dtype=int)
+    ncounter = np.zeros(SIZE, dtype=np.float32)
+    nstartcounter = np.zeros(SIZE, dtype=np.float32)
 
 #starting site
     site = np.random.randint(SIZE)
@@ -86,20 +87,33 @@ def main():
 
     stepcounter = 1
 
-    for _ in range(2):
- 
-        probsarray = np.random.rand(NSTEPS,3)
+    #File for probability on site by time
+    fileprob = open('prob.bin', 'wb')
+    #File for mean Rij on site by time
+    filersum = open('rsum.bin', 'wb')
 
-        for zz in probsarray:
+    prevprobs = np.zeros(SIZE, dtype=np.float32)
+
+    for _ in range(MAXEPOCHS):
+
+        siteprobepoch = np.zeros((NSTEPS,SIZE), dtype=np.float32)
+        sitevaluepoch = np.zeros((NSTEPS,SIZE), dtype=np.float32)
+
+        randsarray = np.random.rand(NSTEPS,3)
+        for i, zz in enumerate(randsarray):
             z1, z2, z3 = zz
             if (z1 < pprob):
+                ##СМЕРТЬ, рождение на случайном месте
                 site = int(z3 * SIZE)
+                ##Обновление счетчика
                 startsite = site
                 nstartcounter[startsite] += 1
             elif (z2 < qprob):
+                ##Переход на соседа
                 neighborsforsite = nb[site]
                 site = randomneighbour(neighborsforsite, z3)
             else:
+                ##Переход на благожелательного соседа
                 neighborsforsite = nb[site]
                 site = goodneighbor(neighborsforsite, rm, z3)
 
@@ -107,10 +121,30 @@ def main():
             nsite[startsite] += rm[site]
             stepcounter += 1
 
-            if (stepcounter % 10000 == 0):
-                #print(ncounter.reshape((-1,MSIZE)) / stepcounter)
-                print((nsite / nstartcounter).reshape((-1,MSIZE)))
+            siteprobepoch[i] = (ncounter / stepcounter).astype(np.float32)
+            sitevaluepoch[i] = (nsite / np.maximum(nstartcounter, 1)).astype(np.float32)
 
+        probs = np.mean(siteprobepoch, axis=0)
+        if (np.max(abs(probs-prevprobs)) < TOLERANCE):
+            break
+
+        prevprobs = probs
+
+        fileprob.write(siteprobepoch)
+        filersum.write(sitevaluepoch)
+
+    fileprob.close()
+    filersum.close()
+
+    #Final values
+    result = np.zeros((3,SIZE))
+    result[0] = rm
+    result[1] = probs
+    result[2] = np.mean(sitevaluepoch, axis=0)
+
+    fileres = open('result.bin', 'wb')
+    fileres.write(result)
+    fileres.close()
 
     return
 
