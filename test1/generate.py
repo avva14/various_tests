@@ -217,10 +217,8 @@ def main():
         boardimage, recs = boardgen(figuresimgs, np.random.rand(13))
 
         if (args.moire):
-
             #random moire pattern
             moir = moirebackground(np.random.rand(8))
-
             #combining together
             boardimage = boardimage*moir
         result = Image.fromarray(boardimage.astype(np.uint8), 'L')
