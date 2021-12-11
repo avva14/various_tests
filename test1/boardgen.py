@@ -81,19 +81,12 @@ def moirebackground(rndarr, imgsize):
 
     return res
 
-def chessboard(figuresimgs, distortrnd, imgsize, params):
-    '''
-    figuresimgs -- dictionary of images read from 'img' folder
-    distortrnd -- random array size 13
-    Returns numpy array shape (imgsize,imgsize), list with figures positions
-    '''
+def striaightboard(figuresimgs, params):
+
     numcell = params['numcell']
     cell = params['cellsize']
     figs = params['figures']
     colors = params['colors']
-    maxshear = params['shear']
-    minscale = params['scale']
-
     boardsize = cell * numcell
 
     blank_image = np.zeros((boardsize,boardsize), np.uint8)
@@ -116,6 +109,20 @@ def chessboard(figuresimgs, distortrnd, imgsize, params):
         blank_image[yp*cell:(yp+1)*cell,xp*cell:(xp+1)*cell] = figuresimgs[fkey]
 
     img = Image.fromarray(blank_image, 'L')
+    return img, rec
+
+def chessboard(figuresimgs, distortrnd, imgsize, params):
+    '''
+    figuresimgs -- dictionary of images read from 'img' folder
+    distortrnd -- random array size 13
+    Returns numpy array shape (imgsize,imgsize), list with figures positions
+    '''
+
+    img, rec = striaightboard(figuresimgs, params)
+    boardsize = img.size[0]
+
+    maxshear = params['shear']
+    minscale = params['scale']
 
     m = -distortrnd[:8] * maxshear * boardsize
     x1, y1 = m[0:2]
@@ -142,15 +149,18 @@ def chessboard(figuresimgs, distortrnd, imgsize, params):
     new_width = int(ceil(max(x2,x3,boardsize)))
     new_height = int(ceil(max(y3,y4,boardsize)))
 
+    new_coords = np.array([x1, y1, x2, y2, x3, y3, x4, y4])
+
     coeffs = find_coeffs(
-        [(x1, y1), (x2, y2), (x3, y3), (x4, y4)],
+        new_coords.reshape((4,2)),
         [(0, 0), (boardsize, 0), (boardsize, boardsize), (0, boardsize)])
 
     img = img.transform((new_width, new_height), Image.PERSPECTIVE, coeffs, Image.BICUBIC, fillcolor = greyscale)
 
     offsets = distortrnd[9:11]
     scalex, scaley = minscale + (1 - minscale) * distortrnd[11:13]
-
+    new_coords = new_coords * np.array(4*[scalex, scaley])
+    
     width, height = img.size
     scaled_wid, scaled_hei = int(round(width * scalex)), int(round(height * scaley))
     img = img.resize((scaled_wid, scaled_hei))
@@ -160,10 +170,12 @@ def chessboard(figuresimgs, distortrnd, imgsize, params):
     xoff = (imgsize - width) * offsets[0]
     yoff = (imgsize - height) * offsets[1]
 
-    offset = (int(round(xoff)), int(round(yoff)))
+    offset = [int(xoff), int(yoff)]
 
     empty = Image.new('L', (imgsize, imgsize), greyscale)
     empty.paste(img, offset)
 
-    return np.asarray(empty), rec
+    vec = new_coords + np.hstack(4*offset)
+
+    return np.asarray(empty), rec, vec
 

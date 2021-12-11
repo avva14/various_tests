@@ -69,7 +69,7 @@ def main():
         idx = uuid.uuid4() 
 
         #random board with figure positions
-        boardimage, recs = chessboard(figuresimgs, np.random.rand(13), IMGSIZE, parameters)
+        boardimage, recs, _ = chessboard(figuresimgs, np.random.rand(13), IMGSIZE, parameters)
 
         if (args.moire):
             #random moire pattern
