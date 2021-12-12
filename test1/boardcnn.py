@@ -13,9 +13,9 @@ IMGSIZE = 480
 SIZE = IMGSIZE // NUMCELL
 
 model = tf.keras.models.load_model(os.path.join('models','unet_board_v4.h5'))
-classifier = tf.keras.models.load_model(os.path.join('models','class_figure_col_v2.h5'), compile=False)
+classifier = tf.keras.models.load_model(os.path.join('models','class_figure_col_v3.h5'), compile=False)
 
-colors = np.array([' ', 'l', 'd'])
+colors = np.array([' ', 'd', 'l'])
 figures = np.array([' ','p','b','n','r','q','k'])
 
 def intersect(i1, i2):

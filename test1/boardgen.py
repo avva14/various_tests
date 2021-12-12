@@ -95,7 +95,7 @@ def striaightboard(figuresimgs, params):
         xp = i % numcell
         yp = i // numcell
 
-        empty = np.random.randint(4)
+        empty = np.random.randint(2)
         fgnm = 'x'
         fgcl = 'x'
         if (empty == 0):
@@ -173,7 +173,7 @@ def chessboard(figuresimgs, distortrnd, imgsize, params):
     offset = [int(xoff), int(yoff)]
 
     empty = Image.new('L', (imgsize, imgsize), greyscale)
-    empty.paste(img, offset)
+    empty.paste(img, [int(xoff), int(yoff)])
 
     vec = new_coords + np.hstack(4*offset)
 
