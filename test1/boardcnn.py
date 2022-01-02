@@ -95,7 +95,7 @@ def figdetectcnn(boardmodel, classmodel, inputimg):
 
 def main():
 
-    parser = argparse.ArgumentParser(description="Generate random images",
+    parser = argparse.ArgumentParser(description="Detect figures positions",
                                      formatter_class=argparse.RawTextHelpFormatter)
 
     parser.add_argument(
