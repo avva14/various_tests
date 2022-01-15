@@ -148,5 +148,79 @@ def main():
 
     return
 
+def mainsmooth():
+
+###parameters block
+# number of steps in 'epoch'
+    NSTEPS = 1000
+    NSMOOTH = 100
+
+# p probability value
+    pprob = 0.8
+
+#q probability value
+    qprob = 0.5
+
+# setting Rij values
+    rm = np.zeros(SIZE)
+    rm[0] = 10
+
+#generates lists for nearests neighbors
+    nb = neighgenerate()
+
+#sums of Rij values for random walk
+    nsite = np.zeros((NSMOOTH, SIZE))
+
+#number of visits of ite site
+    ncounter = np.zeros((NSMOOTH, SIZE), dtype=np.float32)
+    nstartcounter = np.zeros((NSMOOTH, SIZE), dtype=np.float32)
+
+    site = np.zeros(NSMOOTH, dtype=np.int32)
+    startsite = np.zeros(NSMOOTH, dtype=np.int32)
+#starting site
+    for p in range(NSMOOTH):
+        site[p] = np.random.randint(SIZE)
+        startsite[p] = site[p]
+        nstartcounter[p, startsite[p]] = 1
+
+    prevprobs = np.zeros(SIZE, dtype=np.float32)
+
+    for _ in range(MAXEPOCHS):
+
+        for p in range(NSMOOTH):
+
+            randsarray = np.random.rand(NSTEPS,3)
+            for zz in randsarray:
+                z1, z2, z3 = zz
+                if (z1 < pprob):
+                    ##СМЕРТЬ, рождение на случайном месте
+                    site[p] = int(z3 * SIZE)
+                    ##Обновление счетчика
+                    startsite[p] = site[p]
+                    nstartcounter[p, startsite[p]] += 1
+                elif (z2 < qprob):
+                    ##Переход на соседа
+                    site[p] = randomneighbour(nb[site[p]], z3)
+                else:
+                    ##Переход на благожелательного соседа
+                    site[p] = goodneighbor(nb[site[p]], rm, z3)
+
+                ncounter[p,site[p]] += 1
+                nsite[p,startsite[p]] += rm[site[p]]
+
+        probs = np.mean(ncounter, axis=0) / NSTEPS
+        if (np.max(abs(probs-prevprobs)) < TOLERANCE):
+            break
+
+        prevprobs = probs
+
+
+    #Final values
+    result = np.zeros((2,SIZE))
+    result[0] = rm
+    result[1] = probs
+
+    return
+
 if __name__=='__main__':
-    main()
+    mainsmooth()
