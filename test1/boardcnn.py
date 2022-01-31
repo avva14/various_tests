@@ -4,7 +4,8 @@ import pandas as pd
 import tensorflow as tf
 import cv2
 from PIL import Image
-from clusterization import clusterize
+from cornersdetect import cornersdetection
+from cornersdetect import detectsdots
 from chessutils import *
 import argparse
 
@@ -18,22 +19,6 @@ classifier = tf.keras.models.load_model(os.path.join('models','class_figure_col_
 colors = np.array([' ', 'd', 'l'])
 figures = np.array([' ','p','b','n','r','q','k'])
 
-def intersect(i1, i2):
-    return (i2[0] <= i1[1]) and (i1[0] <= i2[1])
-def closeintervals(i1, i2):
-    return intersect(i1, i2) and (abs(i1[2]-i2[2]) == 1)
-
-def centerofmass(c):
-    xm = 0
-    ym = 0
-    nm = 0
-    for i in c:
-        ns = i[1]-i[0]+1
-        xm += 0.5*(i[1]+i[0])*ns
-        ym += i[2]*ns
-        nm += ns
-    return xm/nm, ym/nm
-
 def figdetectcnn(boardmodel, classmodel, inputimg):
     '''
     Detection routine
@@ -42,35 +27,16 @@ def figdetectcnn(boardmodel, classmodel, inputimg):
     img = cv2.resize(img, (IMGSIZE,IMGSIZE))
     feed = np.expand_dims(img/255, axis=(0,-1))
     pred = np.squeeze(boardmodel.predict(feed))
-    bp = 1 - np.argmax(pred, axis=-1)
 
-    xsumms = np.sum(bp, axis=-1)
-    res = []
-    for y, xsumm in enumerate(xsumms):
-        if xsumm == 0:
-            continue
-        s = bp[y]
-        diffs = s[1:]-s[:-1]
-        starts = np.where(diffs==1)[0]
-        ends = np.where(diffs==-1)[0]
-        for i1, i2 in zip(starts,ends):
-            res.append([i1+1,i2,y])
+    corners = cornersdetection(pred)
+    xyc = np.mean(corners, axis=0)
 
-    cl = clusterize(res, closeintervals)
-
-    xy = np.array(list(map(centerofmass, cl)))
-    xyc = np.mean(xy, axis=0)
-    mhdists = [np.sum(np.abs(p-xyc)) for p in xy]
-    corners = xy[np.argsort(mhdists)[-4:]]
-
-    half = 0.5 * np.max(mhdists)
+    half = 0.5*np.max([np.sum(np.abs(p-xyc)) for p in corners])
     newc = xyc + half*np.array([[-1,-1],[1,-1],[-1,1],[1,1]])
 
-    ixmatch = [np.argmin(np.sum(np.abs(p-corners), axis=1)) for p in newc]
-    cornersmatch = corners[ixmatch]
     brdsize = half / 6 * NUMCELL
  
-    coeffs = find_coeffs(newc, cornersmatch)
+    coeffs = find_coeffs(newc, corners)
 
     img = Image.fromarray(img)
     img = img.transform(img.size, Image.PERSPECTIVE, coeffs, Image.BICUBIC)
