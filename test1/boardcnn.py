@@ -5,7 +5,6 @@ import tensorflow as tf
 import cv2
 from PIL import Image
 from cornersdetect import cornersdetection
-from cornersdetect import detectsdots
 from chessutils import *
 import argparse
 
@@ -27,8 +26,9 @@ def figdetectcnn(boardmodel, classmodel, inputimg):
     img = cv2.resize(img, (IMGSIZE,IMGSIZE))
     feed = np.expand_dims(img/255, axis=(0,-1))
     pred = np.squeeze(boardmodel.predict(feed))
+    points = np.argmax(pred, axis=-1)
 
-    corners = cornersdetection(pred)
+    corners = cornersdetection(points)
     xyc = np.mean(corners, axis=0)
 
     half = 0.5*np.max([np.sum(np.abs(p-xyc)) for p in corners])
